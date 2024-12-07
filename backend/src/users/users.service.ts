@@ -1,16 +1,60 @@
 // users.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { User } from 'src/schemas/user/user.schema';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async getAllUsers(): Promise<User[]> {
-    const users = await this.userModel.find().exec();
-    Logger.log(`Fetched users: ${JSON.stringify(users, null, 2)}`);
-    return users;
+    return await this.userModel.find().exec();
+  }
+
+  async getUserById(userId: string): Promise<User | null> {
+    if (!isValidObjectId(userId)) {
+      Logger.error(`Invalid user ID: ${userId}`);
+      throw new BadRequestException(`Invalid user ID: ${userId}`);
+    }
+    const existingUser = await this.userModel.findById(userId).exec();
+    if (!existingUser) {
+      Logger.error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    Logger.log(`User found: ${userId} - ${existingUser.email}`);
+    return existingUser
+  }
+
+  async updateUserById(userId: string, updateData: Partial<User>): Promise<User> {
+    if (!isValidObjectId(userId)) {
+      Logger.error(`Invalid user ID: ${userId}`);
+      throw new BadRequestException(`Invalid user ID: ${userId}`);
+    }
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateData, { new: true }).exec();
+    if (!updatedUser) {
+      Logger.error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    Logger.log(`User updated: ${userId} - ${updatedUser.email}`);
+    return updatedUser;
+  }
+
+  async deleteUserById(userId: string): Promise<User> {
+    if (!isValidObjectId(userId)) {
+      Logger.error(`Invalid user ID: ${userId}`);
+      throw new BadRequestException(`Invalid user ID: ${userId}`);
+    }
+    const deletedUser = await this.userModel.findByIdAndDelete(userId).exec();
+    if (!deletedUser) {
+      Logger.error(`User with ID ${userId} not found`);
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    Logger.log(`User deleted: ${userId} - ${deletedUser.email}`);
+    return deletedUser;
   }
 }

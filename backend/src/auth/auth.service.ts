@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -18,11 +18,21 @@ export class AuthService {
       Logger.error(`User not found!`);
       throw new UnauthorizedException('User not found!');
     }
-    Logger.log(`User validated: ${user}`);
+    Logger.log(`User validated: ${user.email}`);
     return user;
   }
 
-  async register(data: { name: string; email: string; password: string }) {
+  async register(data: { username: string; email: string; password: string }) {
+    const missingProperties = [];
+    if (!data.username) missingProperties.push('username');
+    if (!data.email) missingProperties.push('email');
+    if (!data.password) missingProperties.push('password');
+
+    if (missingProperties.length > 0) {
+      const missingPropsString = missingProperties.join(', ');
+      Logger.error(`Missing properties in register request: ${missingPropsString}`);
+      throw new BadRequestException(`Missing properties: ${missingPropsString}`);
+    }
     const existingUser = await this.userModel.findOne({ email: data.email }).exec();
     if (existingUser) {
       Logger.error(`Email ${data.email} is already taken!`);
@@ -33,18 +43,27 @@ export class AuthService {
       ...data,
       password: hashedPassword,
     });
-    Logger.log(`New User successfully registered: ${newUser}`);
+    Logger.log(`New User successfully registered: ${newUser.email}`);
     return newUser.save();
   }
 
   async login(email: string, password: string) {
+    const missingProperties = [];
+    if (!email) missingProperties.push('email');
+    if (!password) missingProperties.push('password');
+
+    if (missingProperties.length > 0) {
+      const missingPropsString = missingProperties.join(', ');
+      Logger.error(`Missing properties in login request: ${missingPropsString}`);
+      throw new BadRequestException(`Missing properties: ${missingPropsString}`);
+    }
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       Logger.error(`Incorrect email or password!`);
       throw new UnauthorizedException('Incorrect email or password!');
     }
     const payload = { sub: user._id, email: user.email };
-    Logger.log(`User successfully logged in: ${user}`);
+    Logger.log(`User successfully logged in: ${user.email}`);
     return {
       accessToken: this.jwtService.sign(payload),
     };

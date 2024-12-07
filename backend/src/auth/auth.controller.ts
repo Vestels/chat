@@ -6,8 +6,8 @@ export class AuthController {
     constructor(private readonly authService: AuthService) {}
 
     @Post('register')
-    async register(@Body() body: { name: string; email: string; password: string }) {
-        Logger.log(`Registering new user: ${body.name} - ${body.name}`);
+    async register(@Body() body: { username: string; email: string; password: string }) {
+        Logger.log(`Registering new user: ${body.email}`);
         return this.authService.register(body);
     }
 
@@ -15,11 +15,5 @@ export class AuthController {
     async login(@Body() body: { email: string; password: string }) {
         Logger.log(`Logging in user: ${body.email}`);
         return this.authService.login(body.email, body.password);
-    }
-
-    @Get('users')
-    async getAllUsers() {
-      Logger.log('Fetching all users');
-      return this.authService.getAllUsers();
     }
 }
