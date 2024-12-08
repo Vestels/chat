@@ -30,12 +30,18 @@ Real time Chat app.
 
 ## Installation Steps:
 
+> [!TIP]
+> Before cloning open a terminal and use:
+```ruby
+cd desktop
+```
+
 > 1. Clone the Reporitory:
 ```ruby
 git clone https://github.com/Vestels/chat
 ```
 
-> 2. Set Up the Environments Variables at: **backend/src/config/db.ts**
+> 2. Open the cloned folder with you IDE and Set Up the Environments Variables at: **backend/src/config/db.ts**
 ```ruby
 export class DbConfig {
   static readonly uri = 'mongodb://localhost:27017/your-database-name'
@@ -43,6 +49,8 @@ export class DbConfig {
   static readonly port = yourPORT
 }
 ```
+> [!WARNING]  
+> Make sure the port you set is not used by other apps!
 
 > 3. Install Dependencies to Backend side and run:
 ```ruby
@@ -51,7 +59,13 @@ npm install
 npm run start:dev
 ```
 >Application will be running on: http://localhost:yourPORT
->
+
+> [!TIP]
+> To test the MongoDB status changes, open the `cmd` **as administrator** and use these commands **separately**:
+ ```ruby
+nest stop MongoDB
+nest start MongoDB
+```
 
 > 4. Install Dependencies to Frontend side and run:
 ```ruby
@@ -184,6 +198,17 @@ upcoming
 
 > **DELETE** `/users/:userID` Deletes a user by ID.<br  />
 `:userId` The ID of the user to delete.<br  />
+
+**Response:**<br  />
+```ruby
+{
+    "_id": "deleted userId",
+    "username": " deleted username",
+    "email": " deleted email",
+    "password": "deleted hashed password",
+    "__v": 0
+}
+```
 
 **Status Responses:**<br  />
 <br  />`200 OK`: User successfully deleted.<br  />
