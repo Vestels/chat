@@ -12,35 +12,25 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(userId: string): Promise<User | null> {
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) {
-      Logger.error(`User not found!`);
-      throw new UnauthorizedException('User not found!');
-    }
-    Logger.log(`User validated: ${user.email}`);
-    return user;
-  }
-
-  async register(data: { username: string; email: string; password: string }) {
+  async register(payload: { username: string; email: string; password: string }) {
     const missingProperties = [];
-    if (!data.username) missingProperties.push('username');
-    if (!data.email) missingProperties.push('email');
-    if (!data.password) missingProperties.push('password');
+    if (!payload.username) missingProperties.push('username');
+    if (!payload.email) missingProperties.push('email');
+    if (!payload.password) missingProperties.push('password');
 
     if (missingProperties.length > 0) {
       const missingPropsString = missingProperties.join(', ');
       Logger.error(`Missing properties in register request: ${missingPropsString}`);
       throw new BadRequestException(`Missing properties: ${missingPropsString}`);
     }
-    const existingUser = await this.userModel.findOne({ email: data.email }).exec();
+    const existingUser = await this.userModel.findOne({ email: payload.email }).exec();
     if (existingUser) {
-      Logger.error(`Email ${data.email} is already taken!`);
+      Logger.error(`Email ${payload.email} is already taken!`);
       throw new ConflictException('Email is already taken!');
     }
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
     const newUser = new this.userModel({
-      ...data,
+      ...payload,
       password: hashedPassword,
     });
     Logger.log(`New User successfully registered: ${newUser.email}`);
@@ -62,14 +52,10 @@ export class AuthService {
       Logger.error(`Incorrect email or password!`);
       throw new UnauthorizedException('Incorrect email or password!');
     }
-    const payload = { sub: user._id, email: user.email };
+    const payload = { id: user._id, email: user.email };
     Logger.log(`User successfully logged in: ${user.email}`);
     return {
       accessToken: this.jwtService.sign(payload),
     };
-  }
-  
-  async getAllUsers(): Promise<User[]> {
-    return this.userModel.find().exec();
   }
 }
