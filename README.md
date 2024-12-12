@@ -119,7 +119,8 @@ upcoming
 
 ### USERS
 > [!IMPORTANT]  
-> **The `/users` routes using JWT AuthGuard for access!**
+> **The `/users` routes using JWT AuthGuard for access!**<br  />
+**A logged in user can only Update / Delete their own datas.**
 
 > [!NOTE]  
 > **Test:** in POSTMAN after successfull login, copy the returned `accessToken` value, go to `Headers` then set a **KEY** with `Authorization` and the **VALUE** with `Bearer accessToken`<br  /> **Example:** **`Bearer eyJhbGciOiJIUzI1NiIsI......`**<br  /> After that, you will be able to access all the users routes.
