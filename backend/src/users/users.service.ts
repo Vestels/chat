@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { User } from 'src/schemas/user/user.schema';
 import * as bcrypt from 'bcrypt';
+import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -27,15 +28,15 @@ export class UsersService {
     return existingUser
   }
 
-  async updateUserById(userId: string, updateData: Partial<User>): Promise<User> {
+  async updateUserById(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
     if (!isValidObjectId(userId)) {
       Logger.error(`Invalid user ID: ${userId}`);
       throw new BadRequestException(`Invalid user ID: ${userId}`);
     }
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
-    const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateData, { new: true }).exec();
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateUserDto, { new: true }).exec();
     if (!updatedUser) {
       Logger.error(`User with ID ${userId} not found`);
       throw new NotFoundException(`User with ID ${userId} not found`);

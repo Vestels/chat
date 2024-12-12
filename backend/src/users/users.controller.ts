@@ -3,6 +3,7 @@ import { Body, Controller, Delete, Get, Logger, Param, Put, UseGuards } from '@n
 import { UsersService } from './users.service';
 import { User } from 'src/schemas/user/user.schema';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -22,9 +23,9 @@ export class UsersController {
   }
 
   @Put(':userId')
-  async updateUser(@Param('userId') userId: string, @Body() updateData: Partial<User>) {
+  async updateUser(@Param('userId') userId: string, @Body() updateUserDto: UpdateUserDto) {
     Logger.log(`Updating user with ID: ${userId}`);
-    return await this.usersService.updateUserById(userId, updateData);
+    return await this.usersService.updateUserById(userId, updateUserDto);
   }
 
   @Delete(':userId')
