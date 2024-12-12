@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: any) {
     try {
       Logger.log(`User validated for request: ${payload.email}`);
-      return { userId: payload.sub, email: payload.email };
+      return { id: payload.id, email: payload.email };
     } catch (error) {
       Logger.error(`Error validating user: ${error.message}`);
       throw error;
