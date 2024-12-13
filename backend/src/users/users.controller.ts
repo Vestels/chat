@@ -3,6 +3,7 @@ import { Body, Controller, Delete, Get, Logger, Param, Put, Request, UseGuards }
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
+import { OwnershipGuard } from 'src/auth/ownership.guard';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -21,16 +22,16 @@ export class UsersController {
     return await this.usersService.getUserById(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OwnershipGuard)
   @Put(':userId')
-  async updateUser(@Param('userId') userId: string, @Body() updateUserDto: UpdateUserDto, @Request() req) {
+  async updateUser(@Param('userId') userId: string, @Body() updateUserDto: UpdateUserDto) {
     Logger.log(`Updating user with ID: ${userId}`);
-    return await this.usersService.updateUserById(userId, updateUserDto, req.user.id);
+    return await this.usersService.updateUserById(userId, updateUserDto);
   }
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OwnershipGuard)
   @Delete(':userId')
-  async deleteUser(@Param('userId') userId: string, @Request() req) {
+  async deleteUser(@Param('userId') userId: string) {
     Logger.log(`Deleting user with ID: ${userId}`);
-    return await this.usersService.deleteUserById(userId, req.user.id);
+    return await this.usersService.deleteUserById(userId);
   }
 }
