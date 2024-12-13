@@ -52,6 +52,7 @@ export class AuthService {
     Logger.log(`User successfully logged in: ${user.email}`);
     return {
       accessToken: this.jwtService.sign(payload),
+      user
     };
   }
 }
