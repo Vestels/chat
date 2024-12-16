@@ -20,7 +20,7 @@ export class UsersService {
     return existingUser;
   }
 
-  async updateUserById(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async updateUserById(userId: string, updateUserDto: Partial<UpdateUserDto>): Promise<User> {
     const existingUser = await validateUserId(userId, this.userModel);
     if (updateUserDto.password) {
       updateUserDto.password = await hashPassword(updateUserDto.password);
