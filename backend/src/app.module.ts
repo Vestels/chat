@@ -5,14 +5,13 @@ import { AuthModule } from './auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
-import { DbConfig } from './config/db';
 import { UsersModule } from './users/users.module';
 import mongoose from 'mongoose';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(DbConfig.uri, {}),
+    MongooseModule.forRoot(process.env.URI, {}),
     AuthModule,
     ChatModule,
     UsersModule,
@@ -29,7 +28,7 @@ export class AppModule implements OnModuleInit  {
   // in cmd: net start MongoDB (to start the service)
   async onModuleInit() {
     try {
-      await mongoose.connect(DbConfig.uri, {});
+      await mongoose.connect(process.env.URI, {});
 
       this.logConnectionState();
 
