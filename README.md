@@ -21,7 +21,9 @@ Real time Chat app.
 - bcrypt
 
 > **Frontend:**
-- upcoming
+- SvelteKit
+- Bootstrap
+- SCSS
 
 ## Prerequisites:
 - [Node.JS](https://nodejs.org/en/download/package-manager)
@@ -41,13 +43,12 @@ cd desktop
 git clone https://github.com/Vestels/chat
 ```
 
-> 2. Open the cloned folder with you IDE and Set Up the Environments Variables at: **backend/src/config/db.ts**
+> 2. Open the cloned folder with you IDE and Set Up the Environments Variables at: **backend/.env**
 ```ruby
-export class DbConfig {
-  static readonly uri = 'mongodb://localhost:27017/your-database-name'
-  static readonly jwtSecret = 'yourSecretKey'
-  static readonly port = yourPORT
-}
+URI = 'mongodb://localhost:27017/your-database-name'
+JWT_SECRET = 'your-secret-string-key'
+JWTEXPIRESIN = 'your-expire-time'
+PORT = your-port
 ```
 > [!WARNING]  
 > Make sure the port you set is not used by other apps!
@@ -58,7 +59,7 @@ cd backend
 npm install
 npm run start:dev
 ```
->Application will be running on: http://localhost:yourPORT
+>Application will be running on: http://localhost:your-port
 
 > [!TIP]
 > To test the MongoDB status changes, open the `cmd` **as administrator** and use these commands **separately**:
@@ -69,8 +70,12 @@ nest start MongoDB
 
 > 4. Install Dependencies to Frontend side and run:
 ```ruby
-upcoming
+cd ..
+cd frontend
+npm install
+npm run dev
 ```
+>Application will be running on: http://localhost:5173
 
 ## API endpoints:
 ### AUTH
@@ -104,7 +109,14 @@ upcoming
 **Response:** <br  />
 ```ruby
 {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsI......"
+    "accessToken": "eyJhbGciOiJIUzI1NiIsI......",
+    "user": {
+        "_id": "string",
+        "username": "string",
+        "email": "string",
+        "password": "hashed string password",
+        "__v": 0
+    }
 }
 ```
 > [!NOTE]  
@@ -119,8 +131,7 @@ upcoming
 
 ### USERS
 > [!IMPORTANT]  
-> **The `/users` routes using JWT AuthGuard for access!**<br  />
-**A logged in user can only Update / Delete their own datas.**
+> **The `/users` routes using JWT AuthGuard for access!**
 
 > [!NOTE]  
 > **Test:** in POSTMAN after successfull login, copy the returned `accessToken` value, go to `Headers` then set a **KEY** with `Authorization` and the **VALUE** with `Bearer accessToken`<br  /> **Example:** **`Bearer eyJhbGciOiJIUzI1NiIsI......`**<br  /> After that, you will be able to access all the users routes.
@@ -136,8 +147,8 @@ upcoming
         "email": "",
         "password": "",
         "__v": 0
-    }
-    {...}
+    },
+    {...},
 ]
 ```
 **Status Responses:** <br  />
@@ -271,6 +282,7 @@ frontend/
 
 > [!NOTE]  
 > The Appliaction basically uses 3 routes, the `Login`, `Register` and the the main `"Chat"` route, which is the [`src/routes/(authed)/+page.svelte`](frontend/src/routes/(authed)/+page.svelte) and it is authed.
+#
 
 ### Key Files and Directories
 
@@ -299,6 +311,7 @@ npm run dev
 ```
 
 > The application will be running on: http://localhost:5173
+#
 
 ### Frontend Code Overview
 
