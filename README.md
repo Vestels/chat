@@ -119,7 +119,8 @@ upcoming
 
 ### USERS
 > [!IMPORTANT]  
-> **The `/users` routes using JWT AuthGuard for access!**
+> **The `/users` routes using JWT AuthGuard for access!**<br  />
+**A logged in user can only Update / Delete their own datas.**
 
 > [!NOTE]  
 > **Test:** in POSTMAN after successfull login, copy the returned `accessToken` value, go to `Headers` then set a **KEY** with `Authorization` and the **VALUE** with `Bearer accessToken`<br  /> **Example:** **`Bearer eyJhbGciOiJIUzI1NiIsI......`**<br  /> After that, you will be able to access all the users routes.
@@ -216,3 +217,126 @@ upcoming
 `404 Not Found`: User not found.<br  />
 #
 <br  />
+
+## Frontend Development
+
+### Project Structure
+
+The frontend project is structured as follows:
+
+```
+frontend/
+    .gitignore
+    .npmrc
+    .prettierignore
+    .prettierrc
+    .svelte-kit/
+        ambient.d.ts
+        generated/
+            client/
+                app.js
+                matchers.js
+                nodes/
+            root.js
+            root.svelte
+            server/
+                internal.js
+        non-ambient.d.ts
+        tsconfig.json
+        types/
+            route_meta_data.json
+            src/
+                routes/
+    eslint.config.js
+    package.json
+    README.md
+    src/
+        app.d.ts
+        app.html
+        hooks.server.ts
+        lib/
+            stores/
+        routes/
+            (authed)/
+            +layout.svelte
+            login/
+            register/
+        utils/
+            cookie.util.ts
+    static/
+    svelte.config.js
+    tsconfig.json
+    vite.config.ts
+```
+
+> [!NOTE]  
+> The Appliaction basically uses 3 routes, the `Login`, `Register` and the the main `"Chat"` route, which is the [`src/routes/(authed)/+page.svelte`](frontend/src/routes/(authed)/+page.svelte) and it is authed.
+
+### Key Files and Directories
+
+- **`src/routes/`**: Contains the SvelteKit routes for the application.
+  - **`(authed)`**: Contains authenticated routes.
+  - **`login/`**: Contains the login page.
+  - **`register/`**: Contains the registration page.
+- **`src/lib/stores/`**: Contains Svelte stores used in the application.
+- **`src/utils/`**: Contains utility functions.
+- **`src/hooks.server.ts`**: Contains server-side hooks.
+- **`src/app.html`**: The main HTML template for the application.
+
+### Running the Frontend
+
+> To run the frontend, navigate to the `frontend` directory and install the dependencies:
+
+```ruby
+cd frontend
+npm install
+```
+
+> Then, start the development server:
+
+```ruby
+npm run dev
+```
+
+> The application will be running on: http://localhost:5173
+
+### Frontend Code Overview
+
+#### Login Page
+
+> The login page is implemented in [`src/routes/login/+page.svelte`](frontend/src/routes/login/+page.svelte). It handles user login and sets cookies for authentication.
+
+#### Registration Page
+
+> The registration page is implemented in [`src/routes/register/+page.svelte`](frontend/src/routes/register/+page.svelte). It handles user registration.
+
+#### Authenticated Routes
+
+> Authenticated routes are implemented in the `(authed)` directory. The main authenticated page is in [`src/routes/(authed)/+page.svelte`](frontend/src/routes/(authed)/+page.svelte).
+
+#### Utility Functions
+
+> Utility functions for handling cookies are implemented in [`src/utils/cookie.util.ts`](frontend/src/utils/cookie.util.ts).
+
+#### Stores
+
+> Svelte stores for managing user state are implemented in [`src/lib/stores/auth.ts`](frontend/src/lib/stores/auth.ts).
+
+### ESLint and Prettier
+
+> The project uses ESLint and Prettier for code linting and formatting. The configuration files are:
+
+- [`eslint.config.js`](frontend/eslint.config.js)
+- [`.prettierrc`](frontend/.prettierrc)
+- [`.prettierignore`](frontend/.prettierignore)
+
+To lint and format the code, run:
+
+```ruby
+npm run lint
+npm run format
+```
+
+### TypeScript
+
+> The project is written in TypeScript. The TypeScript configuration file is [`tsconfig.json`](frontend/tsconfig.json).
