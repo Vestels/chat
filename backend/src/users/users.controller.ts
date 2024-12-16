@@ -1,8 +1,9 @@
 // users.controller.ts
-import { Body, Controller, Delete, Get, Logger, Param, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, Put, Request, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { User } from 'src/schemas/user/user.schema';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
+import { OwnershipGuard } from 'src/auth/ownership.guard';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -21,12 +22,13 @@ export class UsersController {
     return await this.usersService.getUserById(userId);
   }
 
+  @UseGuards(OwnershipGuard)
   @Put(':userId')
-  async updateUser(@Param('userId') userId: string, @Body() updateData: Partial<User>) {
+  async updateUser(@Param('userId') userId: string, @Body() updateUserDto: UpdateUserDto) {
     Logger.log(`Updating user with ID: ${userId}`);
-    return await this.usersService.updateUserById(userId, updateData);
+    return await this.usersService.updateUserById(userId, updateUserDto);
   }
-
+  @UseGuards(OwnershipGuard)
   @Delete(':userId')
   async deleteUser(@Param('userId') userId: string) {
     Logger.log(`Deleting user with ID: ${userId}`);

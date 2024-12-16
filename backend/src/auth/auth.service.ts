@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from 'src/schemas/user/user.schema';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from 'src/schemas/user/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -12,27 +13,22 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(payload: { username: string; email: string; password: string }) {
-    const missingProperties = [];
-    if (!payload.username) missingProperties.push('username');
-    if (!payload.email) missingProperties.push('email');
-    if (!payload.password) missingProperties.push('password');
+  async register(createUserDto: CreateUserDto) {
+    const { username, email, password } = createUserDto;
 
-    if (missingProperties.length > 0) {
-      const missingPropsString = missingProperties.join(', ');
-      Logger.error(`Missing properties in register request: ${missingPropsString}`);
-      throw new BadRequestException(`Missing properties: ${missingPropsString}`);
-    }
-    const existingUser = await this.userModel.findOne({ email: payload.email }).exec();
+    const existingUser = await this.userModel.findOne({ email }).exec();
     if (existingUser) {
-      Logger.error(`Email ${payload.email} is already taken!`);
+      Logger.error(`Email ${email} is already taken!`);
       throw new ConflictException('Email is already taken!');
     }
-    const hashedPassword = await bcrypt.hash(payload.password, 10);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new this.userModel({
-      ...payload,
+      username,
+      email,
       password: hashedPassword,
     });
+
     Logger.log(`New User successfully registered: ${newUser.email}`);
     return newUser.save();
   }
@@ -56,6 +52,7 @@ export class AuthService {
     Logger.log(`User successfully logged in: ${user.email}`);
     return {
       accessToken: this.jwtService.sign(payload),
+      user
     };
   }
 }
