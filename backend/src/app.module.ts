@@ -3,24 +3,32 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import mongoose from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
+import { JwtStrategy } from './auth/jwt.strategy';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(process.env.URI, {}),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('URI'),
+      }),
+      inject: [ConfigService],
+    }),
     AuthModule,
     ChatModule,
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, JwtService, JwtStrategy],
 })
 export class AppModule implements OnModuleInit  {
-  constructor() {}
+  constructor(private configService: ConfigService) {}
 
   // Real time database connection status logging
   // to test in npm run start:dev
@@ -28,7 +36,7 @@ export class AppModule implements OnModuleInit  {
   // in cmd: net start MongoDB (to start the service)
   async onModuleInit() {
     try {
-      await mongoose.connect(process.env.URI, {});
+      await mongoose.connect(this.configService.get<string>('URI'));
 
       this.logConnectionState();
 
