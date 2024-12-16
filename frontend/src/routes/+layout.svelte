@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { fade } from "svelte/transition";
+    import '../app.scss';
 </script>
 
-<div>
-    <slot />
-</div>
+<slot />

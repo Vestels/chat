@@ -1,9 +1,11 @@
 import { writable } from 'svelte/store';
 import { getCookie } from '../../utils/cookie.util';
 
-interface User {
-    username: string;
+export interface User {
+    _id: string;
     email: string;
+    username: string;
+    password: string;
 }
 
 const storedUser = getCookie('user');
