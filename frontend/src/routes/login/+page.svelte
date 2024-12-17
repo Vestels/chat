@@ -3,9 +3,12 @@
 	import { User } from '$lib/stores/auth';
 	import { fade } from 'svelte/transition';
 	import { setCookie } from '../../utils/cookie.util';
+	import { writable } from 'svelte/store';
 
 	let email = '';
 	let password = '';
+
+	let isCredentialsCorrect = writable(true);
 
 	export const handleLogin = async () => {
 		const res = await fetch('http://localhost:3000/auth/login', {
@@ -24,6 +27,7 @@
 			User.set(data.user);
 			goto('/');
 		} else {
+			isCredentialsCorrect.set(false);
 			console.error('Something went wrong!');
 		}
 	};
@@ -55,6 +59,14 @@
 				minlength="8"
 			/>
 		</div>
+
+		{#if !$isCredentialsCorrect}
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			Invalid e-mail or password!
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" on:click={() => {isCredentialsCorrect.set(true)}}></button>
+		</div>
+		{/if}
+
 		<div class="bottom-section">
 			<button type="submit" class="btn btn-primary my-3">Login</button>
 			<div>
