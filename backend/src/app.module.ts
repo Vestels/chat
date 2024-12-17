@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import mongoose from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from './auth/jwt.strategy';
+import { ChatGateway } from './chat/chat.gateway';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { JwtStrategy } from './auth/jwt.strategy';
     AuthModule,
     ChatModule,
     UsersModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [AppService, JwtService, JwtStrategy],

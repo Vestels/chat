@@ -5,10 +5,14 @@ import { User } from 'src/schemas/user/user.schema';
 import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
 import { hashPassword, validateUserId } from './users.helpers';
 import { Model } from 'mongoose';
+import { ChatGateway } from 'src/chat/chat.gateway';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(@InjectModel(User.name) private userModel: Model<User>,
+  private chatGateway: ChatGateway,  
+) {}
+
 
   async getAllUsers(): Promise<User[]> {
     return await this.userModel.find().exec();
@@ -27,6 +31,7 @@ export class UsersService {
     }
     const updatedUser = await this.userModel.findByIdAndUpdate(userId, updateUserDto, { new: true }).exec();
     Logger.log(`User updated: ${userId} - ${existingUser.email}`);
+    this.chatGateway.server.emit('user-updated', updatedUser);
     return updatedUser;
   }
 
@@ -34,6 +39,7 @@ export class UsersService {
     const existingUser = await validateUserId(userId, this.userModel);
     const deletedUser = await this.userModel.findByIdAndDelete(userId).exec();
     Logger.log(`User deleted: ${userId} - ${existingUser.email}`);
+    this.chatGateway.server.emit('user-deleted', deletedUser._id);
     return deletedUser;
   }
 }

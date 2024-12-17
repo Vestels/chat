@@ -5,14 +5,17 @@ import { Model } from 'mongoose';
 import { User } from 'src/schemas/user/user.schema';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from 'src/schemas/user/dto/create-user.dto';
+import { ChatGateway } from 'src/chat/chat.gateway';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
+    private chatGateway: ChatGateway,
   ) {}
 
+ 
   async register(createUserDto: CreateUserDto) {
     const { username, email, password } = createUserDto;
 
@@ -30,6 +33,7 @@ export class AuthService {
     });
 
     Logger.log(`New User successfully registered: ${newUser.email}`);
+    this.chatGateway.server.emit('new-user', newUser);
     return newUser.save();
   }
 
