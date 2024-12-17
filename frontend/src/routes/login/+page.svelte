@@ -4,6 +4,7 @@
 	import { fade } from 'svelte/transition';
 	import { setCookie } from '../../utils/cookie.util';
 	import { writable } from 'svelte/store';
+	import { showNotification } from '$lib/stores/notification';
 
 	let email = '';
 	let password = '';
@@ -26,6 +27,7 @@
 			setCookie('user', JSON.stringify(data.user))
 			User.set(data.user);
 			goto('/');
+			showNotification(`Welcome, ${data.user.username}!`);
 		} else {
 			isCredentialsCorrect.set(false);
 			console.error('Something went wrong!');

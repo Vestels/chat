@@ -1,5 +1,7 @@
 <script lang="ts">
-    import '../app.scss';
+    import Popup from '$lib/components/Popup.svelte';
+import '../app.scss';
 </script>
 
 <slot />
+<Popup />

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { showNotification } from '$lib/stores/notification';
 	import { writable } from 'svelte/store';
 	import { fade } from 'svelte/transition';
 
@@ -28,6 +29,7 @@
 			const data = await res.json();
 			console.log(data);
 			goto('/Login');
+			showNotification('Registration successful!');
 		} else {
 			isCredentialsCorrect.set(false);
 			console.error('Failed to register');

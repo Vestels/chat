@@ -6,6 +6,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { io } from 'socket.io-client';
+	import { showNotification } from '$lib/stores/notification';
 
 	const users = writable<User[]>([]);
 
@@ -111,6 +112,7 @@
 		deleteCookie('user');
 		User.set(null);
 		goto('/login');
+		showNotification('See you soon!');
 	};
 
 	const updateUser = async () => {
@@ -137,6 +139,7 @@
 			body: JSON.stringify(newValues)
 		});
 		if (response.ok) {
+			showNotification('Profile updated successfully');
 			const updatedUser = await response.json();
 			User.set(updatedUser);
 			resetProfileChanges();
@@ -159,6 +162,7 @@
 			deleteCookie('user');
 			User.set(null);
 			goto('/login');
+			showNotification('Profile deleted successfully');
 		} else {
 			console.error('Failed to delete profile');
 		}
@@ -221,7 +225,7 @@
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
 						type="button"
-						class="btn btn-outline-secondary d-flex align-items-center justify-content-center w-75"
+						class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center w-75"
 						on:click={() => menu.set(false)}
 					>
 						Close
@@ -229,7 +233,7 @@
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
 						type="button"
-						class="btn btn-secondary d-flex align-items-center justify-content-center w-75"
+						class="btn btn-secondary btn-sm d-flex align-items-center justify-content-center w-75"
 						data-bs-toggle="button"
 						on:click={() => profileSettings.set(!$profileSettings)}
 					>
@@ -238,7 +242,7 @@
 					<button
 						on:click={handleLogout}
 						type="button"
-						class="btn btn-danger d-flex align-items-center justify-content-center w-75"
+						class="btn btn-danger btn-sm d-flex align-items-center justify-content-center w-75"
 					>
 						Sign Out
 					</button>
@@ -420,7 +424,7 @@
 						{#if !isSaveDisabled}
 							<button
 								type="button"
-								class="btn btn-warning w-50"
+								class="btn btn-warning btn-sm w-50"
 								transition:fade={{ duration: 300 }}
 								on:click={() => {
 									resetProfileChanges(), isPasswordsMatch.set(true);
@@ -429,13 +433,13 @@
 						{/if}
 						<button
 							type="submit"
-							class="btn btn-success w-50"
+							class="btn btn-success btn-sm w-50"
 							disabled={isSaveDisabled}
 							transition:fade={{ duration: 300 }}>Save Changes</button
 						>
 						<button
 							type="button"
-							class="btn btn-secondary w-50"
+							class="btn btn-secondary btn-sm w-50"
 							transition:fade={{ duration: 300 }}
 							on:click={() => {
 								resetProfileChanges(), profileSettings.set(false);
@@ -444,7 +448,7 @@
 						{#if isDeleteDisabled}
 							<button
 								type="button"
-								class="btn btn-danger w-50"
+								class="btn btn-danger btn-sm w-50"
 								transition:fade={{ duration: 300 }}
 								on:click={() => {
 									confirmation.set(true);
