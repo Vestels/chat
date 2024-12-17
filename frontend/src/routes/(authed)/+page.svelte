@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { User } from '$lib/stores/auth';
-	import { writable, type Writable } from 'svelte/store';
+	import { writable } from 'svelte/store';
 	import { deleteCookie, getCookie } from '../../utils/cookie.util';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
+	import { io } from 'socket.io-client';
 
 	const users = writable<User[]>([]);
 
@@ -26,6 +27,8 @@
 	let updateEmail = writable(false);
 	let updatePassword = writable(false);
 
+	let socket: ReturnType<typeof io> | null = null;
+
 	const resetProfileChanges = async () => {
 		newUsername = '';
 		newEmail = '';
@@ -37,6 +40,55 @@
 	};
 
 	onMount(() => {
+		const userId = $User?._id;
+		if (userId && !socket) {
+			socket = io('http://localhost:3000', {
+				query: { userId },
+				reconnection: true,
+			});
+
+			// User connected
+			socket.on('connect', () => {
+				console.log('Connected to server');
+			});
+
+			// User disconnected
+			socket.on('disconnect', () => {
+				console.log('Disconnected from server');
+			});
+
+			socket.on('userStatus', (data) => {
+				const { userId, online } = data;
+				users.update((currentUsers) => {
+					const userToUpdate = currentUsers.find((user) => user._id === userId);
+					if (userToUpdate) {
+						userToUpdate.online = online;
+					}
+					return currentUsers;
+				});
+			});
+			// User regsitered
+			socket.on('new-user', (newUser) => {
+				$users = [...$users, newUser];
+			});
+
+			socket.on('user-updated', (updatedUser) => {
+				users.update((currentUsers) => {
+					const userIndex = currentUsers.findIndex((user) => user._id === updatedUser._id);
+					if (userIndex !== -1) {
+						currentUsers[userIndex] = updatedUser;
+					}
+					return currentUsers;
+				});
+			});
+
+			socket.on('user-deleted',(userId) => {
+				users.update((currenstUsers) => {
+					return currenstUsers.filter((user) => user._id !== userId);
+				})
+			})
+		}
+
 		async function fetchUsers() {
 			const response = await fetch('http://localhost:3000/users', {
 				method: 'GET',
@@ -52,9 +104,6 @@
 			}
 		}
 		fetchUsers();
-		const interval = setInterval(fetchUsers, 5000);
-
-		return () => clearInterval(interval);
 	});
 
 	const handleLogout = () => {
@@ -68,12 +117,17 @@
 		const newValues: { [key: string]: string } = {};
 		if (newUsername) newValues.username = newUsername;
 		if (newEmail) newValues.email = newEmail;
-		if (newPassword === confirmPassword) {
+		if (newPassword === confirmPassword && newPassword && confirmPassword) {
 			newValues.password = newPassword;
 		} else {
 			isPasswordsMatch.set(false);
-			return;
 		}
+		if ($User?.status) {
+			newValues.status = $User?.status;
+		} else {
+			newValues.status = '';
+		}
+
 		const response = await fetch(`http://localhost:3000/users/${$User?._id}`, {
 			method: 'PATCH',
 			headers: {
@@ -86,11 +140,9 @@
 			const updatedUser = await response.json();
 			User.set(updatedUser);
 			resetProfileChanges();
-			profileSettings.set(false);
 			isPasswordsMatch.set(true);
-			console.log(updatedUser);
 		} else {
-			console.error('Failed to update profile');
+			console.error('Failed to update userí');
 		}
 	};
 
@@ -111,6 +163,12 @@
 			console.error('Failed to delete profile');
 		}
 	};
+
+	onDestroy(() => {
+		if (socket) {
+			socket.disconnect();
+		}
+	});
 </script>
 
 <main class="d-flex flex-column align-itmes-center justify-content-center w-100 text-light">
@@ -133,12 +191,20 @@
 				<i class="bi bi-people-fill text-white"></i>
 			</div>
 			<div class="d-flex flex-column align-items-center gap-3">
-				{#each $users.filter((user) => user.email !== $User?.email) as user}
+				{#each $users
+					.filter((user) => user.email !== $User?.email)
+					.sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0)) as user}
 					<div
 						class="avatar users rounded-circle bg-dark d-flex justify-content-center align-items-center p-1 text-light"
+						class:online={user.online === true}
 					>
 						{user.username[0].toUpperCase()}
-						<div class="tooltip bg-black text-light p-2 rounded bg-opacity-75">{user.username}</div>
+						<div class="tooltip bg-black text-light rounded bg-opacity-75 p-2">
+							<div>{user.username}</div>
+							{#if user.status}
+								<div class="opacity-50">{user.status}</div>
+							{/if}
+						</div>
 					</div>
 				{/each}
 			</div>
@@ -151,14 +217,14 @@
 					in:fly={{ y: -100 }}
 					out:fly={{ y: -100 }}
 				>
-				<h3 class="text-light">Menu</h3>
+					<h3 class="text-light">Menu</h3>
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
 						type="button"
 						class="btn btn-outline-secondary d-flex align-items-center justify-content-center w-75"
 						on:click={() => menu.set(false)}
 					>
-					Close
+						Close
 					</button>
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
@@ -250,9 +316,11 @@
 							{$User?.username[0].toUpperCase()}
 						</div>
 						<input
+							on:blur={() => updateUser()}
 							type="text"
-							placeholder="Set your status..."
 							class="border py-2 px-3 w-75 rounded"
+							placeholder="Set your status..."
+							bind:value={$User!.status}
 						/>
 						<input type="file" name="file" class="mb-3" />
 						<div class="d-flex flex-column gap-3 w-75 mb-5">
@@ -355,14 +423,15 @@
 								class="btn btn-warning w-50"
 								transition:fade={{ duration: 300 }}
 								on:click={() => {
-									resetProfileChanges(),
-									isPasswordsMatch.set(true)
+									resetProfileChanges(), isPasswordsMatch.set(true);
 								}}>Cancel</button
 							>
 						{/if}
-						<button type="submit" class="btn btn-success w-50" disabled={isSaveDisabled}
-						transition:fade={{ duration: 300 }}
-							>Save Changes</button
+						<button
+							type="submit"
+							class="btn btn-success w-50"
+							disabled={isSaveDisabled}
+							transition:fade={{ duration: 300 }}>Save Changes</button
 						>
 						<button
 							type="button"
@@ -423,7 +492,11 @@
 			rgba(0, 0, 0, 0.12) 0px 4px 6px,
 			rgba(0, 0, 0, 0.17) 0px 12px 13px,
 			rgba(0, 0, 0, 0.09) 0px -3px 5px;
-		outline: 3px solid #fff;
+		outline: 3px solid #666666;
+	}
+
+	.online {
+		outline: 3px solid #01b119;
 	}
 
 	.avatar:hover {
@@ -449,7 +522,6 @@
 	.users:hover .tooltip {
 		visibility: visible;
 		opacity: 1;
-
 	}
 
 	.friends {
