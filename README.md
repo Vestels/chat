@@ -176,7 +176,7 @@ npm run dev
 #
 <br  />
 
-> **PUT** `/users/:userID` Updates a user by ID.<br  />
+> **PATCH** `/users/:userID` Updates a user by ID.<br  />
 `:userId` The ID of the user to update.<br  />
 
 **Request Body:**
