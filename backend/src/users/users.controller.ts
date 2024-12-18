@@ -1,9 +1,12 @@
 // users.controller.ts
-import { Body, Controller, Delete, Get, Logger, Param, Patch, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, Patch, Put, Request, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Multer } from 'multer';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
 import { OwnershipGuard } from 'src/auth/ownership.guard';
+import { multerConfig } from 'src/configs/multer.config';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -33,5 +36,18 @@ export class UsersController {
   async deleteUser(@Param('userId') userId: string) {
     Logger.log(`Deleting user with ID: ${userId}`);
     return await this.usersService.deleteUserById(userId);
+  }
+
+  @UseGuards(OwnershipGuard)
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  @Put(':userId/pfp')
+  async uploadProfilePicture(@Param('userId') userId: string, @UploadedFile() file: Multer.File) {
+    return await this.usersService.uploadProfilePictureById(userId, file);
+  }
+  @UseGuards(OwnershipGuard)
+  @Delete(':userId/pfp')
+  async deleteProfilePicture(@Param('userId') userId: string) {
+    Logger.log(`Deleting profile picture for user with ID: ${userId}`);
+    return await this.usersService.deleteProfilePictureById(userId);
   }
 }

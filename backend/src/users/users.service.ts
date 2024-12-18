@@ -6,6 +6,9 @@ import { UpdateUserDto } from 'src/schemas/user/dto/update-user.dto';
 import { hashPassword, validateUserId } from './users.helpers';
 import { Model } from 'mongoose';
 import { ChatGateway } from 'src/chat/chat.gateway';
+import { Multer } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class UsersService {
@@ -42,4 +45,37 @@ export class UsersService {
     this.chatGateway.server.emit('user-deleted', deletedUser._id);
     return deletedUser;
   }
+
+  async uploadProfilePictureById(userId: string, file: Multer.File): Promise<User> {
+    const existingUser = await validateUserId(userId, this.userModel);
+    const profilePictureUrl = `/uploads/profile-pictures/${file.filename}`;
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, { profilePicture: profilePictureUrl }, { new: true }).exec();
+    Logger.log(`Profile picture uploaded: ${userId} - ${existingUser.email}`);
+    this.chatGateway.server.emit('profile-picture-uploaded', updatedUser);
+    return updatedUser;
+  }
+
+async deleteProfilePictureById(userId: string): Promise<User> {
+    const existingUser = await validateUserId(userId, this.userModel);
+    if (existingUser.profilePicture) {
+        const filePath = path.join(__dirname, '../..', existingUser.profilePicture);
+        try {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                Logger.log(`Deleted file: ${filePath}`);
+            }
+        } catch (error) {
+            Logger.error(`Error deleting file: ${error.message}`);
+        }
+        const updatedUser = await this.userModel.findByIdAndUpdate(
+            userId,
+            { $unset: { profilePicture: 1 } },
+            { new: true }
+        ).exec();
+        Logger.log(`Profile picture removed for user: ${userId}`);
+        this.chatGateway.server.emit('profile-picture-uploaded', updatedUser);
+        return updatedUser;
+    }
+    return existingUser;
+}
 }

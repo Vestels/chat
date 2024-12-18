@@ -10,6 +10,8 @@ import mongoose from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { ChatGateway } from './chat/chat.gateway';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -20,6 +22,10 @@ import { ChatGateway } from './chat/chat.gateway';
         uri: configService.get<string>('URI'),
       }),
       inject: [ConfigService],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
     AuthModule,
     ChatModule,

@@ -17,6 +17,9 @@ export class User extends Document {
 
   @Prop({default: null})
   status: string;
+
+  @Prop({default: null})
+  profilePicture: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
