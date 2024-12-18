@@ -8,6 +8,7 @@ export interface User {
     password: string;
     status: string;
     online: boolean;
+    profilePicture: string;
 }
 
 const storedUser = getCookie('user');

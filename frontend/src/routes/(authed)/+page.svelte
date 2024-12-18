@@ -8,14 +8,20 @@
 	import { io } from 'socket.io-client';
 	import { showNotification } from '$lib/stores/notification';
 
+	const apiBaseUrl = 'http://localhost:3000';
+
 	const users = writable<User[]>([]);
+	let socket: ReturnType<typeof io> | null = null;
+	let profilePicture: File | null = null;
+	let previewProfilePicture: string | null = null;
 
 	let menu = writable(false);
 	let profileSettings = writable(false);
 	let confirmation = writable(false);
 
 	$: isSaveDisabled = !newUsername && !newEmail && !newPassword && !confirmPassword;
-	$: isDeleteDisabled = !$updateName && !$updateEmail && !$updatePassword;
+	$: isDeleteDisabled =
+		!$updateName && !$updateEmail && !$updatePassword && !profilePicture && !previewProfilePicture;
 
 	let isPasswordsMatch = writable(true);
 
@@ -27,8 +33,6 @@
 	let updateName = writable(false);
 	let updateEmail = writable(false);
 	let updatePassword = writable(false);
-
-	let socket: ReturnType<typeof io> | null = null;
 
 	const resetProfileChanges = async () => {
 		newUsername = '';
@@ -43,17 +47,15 @@
 	onMount(() => {
 		const userId = $User?._id;
 		if (userId && !socket) {
-			socket = io('http://localhost:3000', {
+			socket = io(`${apiBaseUrl}`, {
 				query: { userId },
-				reconnection: true,
+				reconnection: true
 			});
 
-			// User connected
 			socket.on('connect', () => {
 				console.log('Connected to server');
 			});
 
-			// User disconnected
 			socket.on('disconnect', () => {
 				console.log('Disconnected from server');
 			});
@@ -68,7 +70,6 @@
 					return currentUsers;
 				});
 			});
-			// User regsitered
 			socket.on('new-user', (newUser) => {
 				$users = [...$users, newUser];
 			});
@@ -83,15 +84,29 @@
 				});
 			});
 
-			socket.on('user-deleted',(userId) => {
+			socket.on('user-deleted', (userId) => {
 				users.update((currenstUsers) => {
 					return currenstUsers.filter((user) => user._id !== userId);
-				})
-			})
+				});
+			});
+
+			socket.on('profile-picture-uploaded', (updatedUser) => {
+				users.update((currentUsers) => {
+					const userIndex = currentUsers.findIndex((user) => user._id === updatedUser._id);
+					if (userIndex !== -1) {
+						currentUsers[userIndex] = updatedUser;
+						if ($User._id === updatedUser._id) {
+							User.set(updatedUser);
+							document.cookie = `user=${JSON.stringify(updatedUser)}; path=/`;
+						}
+					}
+					return currentUsers;
+				});
+			});
 		}
 
 		async function fetchUsers() {
-			const response = await fetch('http://localhost:3000/users', {
+			const response = await fetch(`${apiBaseUrl}/users`, {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -130,7 +145,7 @@
 			newValues.status = '';
 		}
 
-		const response = await fetch(`http://localhost:3000/users/${$User?._id}`, {
+		const response = await fetch(`${apiBaseUrl}/users/${$User?._id}`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
@@ -150,7 +165,8 @@
 	};
 
 	const deleteUser = async () => {
-		const response = await fetch(`http://localhost:3000/users/${$User?._id}`, {
+		await deleteProfilePicture();
+		const response = await fetch(`${apiBaseUrl}/users/${$User?._id}`, {
 			method: 'DELETE',
 			headers: {
 				'Content-Type': 'application/json',
@@ -172,7 +188,95 @@
 		if (socket) {
 			socket.disconnect();
 		}
+
+		if (previewProfilePicture) {
+			URL.revokeObjectURL(previewProfilePicture);
+		}
 	});
+
+	let fileInput: HTMLInputElement;
+
+	const triggerFileInput = () => {
+		if (fileInput) {
+			fileInput.click();
+		}
+	};
+
+	const handleProfilePictureChange = (event: Event) => {
+		const target = event.target as HTMLInputElement;
+		if (previewProfilePicture) {
+			URL.revokeObjectURL(previewProfilePicture);
+		}
+		profilePicture = null;
+		previewProfilePicture = null;
+
+		if (!target.files || target.files.length !== 1) {
+			if (fileInput) fileInput.value = '';
+			return;
+		}
+		profilePicture = target.files[0];
+		previewProfilePicture = URL.createObjectURL(profilePicture);
+	};
+
+	const deleteProfilePicture = async () => {
+		try {
+			if ($User?.profilePicture) {
+				const response = await fetch(`${apiBaseUrl}/users/${$User._id}/pfp`, {
+					method: 'DELETE',
+					headers: {
+						Authorization: `Bearer ${getCookie('token')}`
+					}
+				});
+				if (response.ok) {
+					showNotification('Profile picture deleted successfully');
+				} else {
+					console.error('Failed to delete profile picture');
+				}
+			}
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
+	const uploadProfilePicture = async () => {
+		const formData = new FormData();
+		if (profilePicture) {
+			deleteProfilePicture();
+
+			formData.append('file', profilePicture);
+
+			const response = await fetch(`${apiBaseUrl}/users/${$User?._id}/pfp`, {
+				method: 'PUT',
+				headers: {
+					Authorization: `Bearer ${getCookie('token')}`
+				},
+				body: formData
+			});
+
+			if (response.ok) {
+				URL.revokeObjectURL(previewProfilePicture!);
+				previewProfilePicture = null;
+				showNotification('Profile picture uploaded successfully');
+				const updatedUser = await response.json();
+				User.set(updatedUser);
+				profilePicture = null;
+				previewProfilePicture = null;
+				document.cookie = `user=${JSON.stringify(updatedUser)}; path=/`;
+				if (fileInput) fileInput.value = '';
+			} else {
+				console.error('Failed to upload profile picture');
+			}
+		}
+	};
+
+	const cancelProfilePictureChange = () => {
+		if (previewProfilePicture) {
+			URL.revokeObjectURL(previewProfilePicture);
+			previewProfilePicture = null;
+		}
+		profilePicture = null;
+		if (fileInput) fileInput.value = '';
+	};
 </script>
 
 <main class="d-flex flex-column align-itmes-center justify-content-center w-100 text-light">
@@ -199,12 +303,16 @@
 					.filter((user) => user.email !== $User?.email)
 					.sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0)) as user}
 					<div
-						class="avatar users rounded-circle bg-dark d-flex justify-content-center align-items-center p-1 text-light"
+						class="avatar p-1 pfp users rounded-circle bg-dark d-flex justify-content-center align-items-center text-light"
 						class:online={user.online === true}
 					>
-						{user.username[0].toUpperCase()}
-						<div class="tooltip bg-black text-light rounded bg-opacity-75 p-2">
-							<div>{user.username}</div>
+						{#if user.profilePicture}
+							<img src={`${apiBaseUrl}${user.profilePicture}`} alt="pfp" />
+						{:else}
+							{user.username[0].toUpperCase()}
+						{/if}
+						<div class="tooltip bg-black text-light rounded px-2 py-1">
+							<div class="text-capitalize">{user.username}</div>
 							{#if user.status}
 								<div class="opacity-50">{user.status}</div>
 							{/if}
@@ -225,7 +333,7 @@
 					<!-- svelte-ignore a11y_consider_explicit_label -->
 					<button
 						type="button"
-						class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center w-75"
+						class="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center w-75"
 						on:click={() => menu.set(false)}
 					>
 						Close
@@ -249,7 +357,7 @@
 				</div>
 			{/if}
 
-			<div class="conversations-header d-flex gap-3 align-items-center">
+			<div class="conversations-header d-flex gap-3 justify-content-center align-items-center">
 				<input
 					class="rounded bg-dark border px-3 py-1 text-light"
 					type="text"
@@ -265,11 +373,11 @@
 		>
 			{#if $confirmation}
 				<div
-					class="delete-confirm rounded-end w-50 bg-dark p-3 gap-5 d-flex flex-column align-items-center justify-content-center text-white text-center w-100"
+					class="delete-confirm rounded bg-dark p-3 gap-5 d-flex flex-column align-items-center justify-content-center text-white text-center w-50 h-75"
 					in:fade={{ duration: 100 }}
 					out:fade={{ duration: 100 }}
 				>
-					<p>Are you sure want to <b>DELETE</b> your Profile?</p>
+					<h5>Are you sure want to <b>DELETE</b> your Profile?</h5>
 					<p><b>Cannot be reverted.</b></p>
 					<div class="d-flex gap-3 w-75">
 						<button
@@ -314,11 +422,40 @@
 						class="d-flex flex-column align-items-center justify-content-center gap-3 w-100"
 					>
 						<div
-							class="rounded-circle d-flex align-items-center justify-content-center bg-dark text-white mb-1"
-							style="cursor: default; height: 80px; width:80px; font-size: 1.5rem;"
+							class="profile-pfp rounded-circle d-flex align-items-center justify-content-center bg-dark text-white"
 						>
-							{$User?.username[0].toUpperCase()}
+							{#if previewProfilePicture}
+								<div
+									class="profile-pfp rounded-circle d-flex align-items-center justify-content-center bg-dark text-white"
+								>
+									<img src={previewProfilePicture} alt="pfp" />
+								</div>
+							{:else if $User?.profilePicture}
+								<div
+									class="profile-pfp rounded-circle d-flex align-items-center justify-content-center bg-dark text-white"
+								>
+									<img src={`${apiBaseUrl}${$User?.profilePicture}`} alt="pfp" />
+								</div>
+							{:else}
+								{$User?.username[0].toUpperCase()}
+							{/if}
 						</div>
+						{#if $User?.profilePicture && !previewProfilePicture}
+							<button
+								type="button"
+								class="btn btn-sm btn-danger w-25"
+								transition:fade={{ duration: 300 }}
+								on:click={deleteProfilePicture}>Remove</button
+							>
+						{/if}
+						<button
+							type="button"
+							class="btn btn-sm btn-light"
+							on:click={triggerFileInput}
+							transition:fade={{ duration: 300 }}
+						>
+							<i class="bi bi-camera-fill"></i> Change Picture
+						</button>
 						<input
 							on:blur={() => updateUser()}
 							type="text"
@@ -326,8 +463,29 @@
 							placeholder="Set your status..."
 							bind:value={$User!.status}
 						/>
-						<input type="file" name="file" class="mb-3" />
-						<div class="d-flex flex-column gap-3 w-75 mb-5">
+						<input
+							bind:this={fileInput}
+							type="file"
+							name="file"
+							accept="image/*"
+							class="d-none"
+							on:change={handleProfilePictureChange}
+						/>
+						{#if profilePicture}
+							<button
+								type="button"
+								class="btn btn-sm btn-warning w-50"
+								transition:fade={{ duration: 300 }}
+								on:click={cancelProfilePictureChange}>Cancel</button
+							>
+							<button
+								type="button"
+								class="btn btn-sm btn-primary w-50 mb-3"
+								transition:fade={{ duration: 300 }}
+								on:click={uploadProfilePicture}>Upload</button
+							>
+						{/if}
+						<div class="d-flex flex-column gap-3 w-75 mb-5 mt-3">
 							<div class="d-flex justify-content-between align-items-center">
 								<div><b class="me-2">Name:</b>{$User?.username}</div>
 								<button
@@ -467,6 +625,28 @@
 		height: 100vh;
 	}
 
+	.profile-pfp {
+		width: 150px;
+		height: 150px;
+		border: none;
+		outline: none;
+		font-size: 3rem;
+	}
+
+	.profile-pfp img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 100%;
+	}
+
+	.pfp img {
+		width: 100% !important;
+		height: 100% !important;
+		object-fit: cover;
+		border-radius: 50%;
+	}
+
 	.chat-card {
 		position: relative;
 		display: inline-block;
@@ -487,8 +667,8 @@
 	}
 
 	.avatar {
-		width: 40px;
-		height: 40px;
+		width: 60px;
+		height: 60px;
 		cursor: pointer;
 		box-shadow:
 			rgba(0, 0, 0, 0.25) 0px 54px 55px,
@@ -507,11 +687,6 @@
 		transform: scale(1.1);
 	}
 
-	/* .users {
-		position: relative;
-		display: inline-block;
-	} */
-
 	.tooltip {
 		visibility: hidden;
 		position: absolute;
@@ -520,7 +695,6 @@
 		z-index: 999;
 		opacity: 0;
 		transition: opacity 0.5s;
-		text-transform: capitalize;
 	}
 
 	.users:hover .tooltip {
@@ -548,9 +722,12 @@
 	}
 
 	.delete-confirm {
-		position: absolute;
-		min-height: 100%;
-		z-index: 2;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		overflow: hidden;
+		z-index: 999;
 	}
 
 	.profile {
